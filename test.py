@@ -8,8 +8,8 @@ class RegexTestCase(unittest.TestCase):
         for testcase in testcases:
             pattern, string, expected = testcase
             actual = regex.match(pattern, string)
-            print "Testing match('%s', '%s').  Expected '%s', got '%s'." % \
-                  (pattern, string, expected, actual)
+            print "Testing match('%s', '%s').  Expected '%s', got '%s'." \
+                % (pattern, string, expected, actual)
             assert (actual == expected)
 
             
@@ -36,7 +36,16 @@ class SimpleTestCases(RegexTestCase):
 
     def testSimpleRegexes(self):
         self.execute(self.testcases)
-        
+
+class PathologicalTestCases(RegexTestCase):
+    def setUp(self):
+        self.testcases = [
+            ('a?'*500+'a'*500, 'a'*500, 'a'*500),
+            ]
+
+    def testPathologicalRegexes(self):
+        self.execute(self.testcases)
+
 if __name__=='__main__':
     unittest.main()
 
