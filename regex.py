@@ -1,3 +1,5 @@
+import itertools
+
 class Concat(object):
     pass
 
@@ -166,31 +168,33 @@ def join (dangling_states, output):
             state.out = output
 
 __visited_states = set()
-__eclosure_results = set()
 
 def epsilonclosure(states):
-    __eclosure_results.clear()
+    __eclosure_results = set()
     __visited_states.clear()
-    map(__epsilonclosure, states)
+    __eclosure_results = set(itertools.
+                                 chain.
+                                 from_iterable(
+                                     [__epsilonclosure(state) for state in states]))
     return __eclosure_results
 
 def __epsilonclosure(state):
+    results = set()
     if state.c == SPLIT and state not in __visited_states:
         __visited_states.add(state)
-        __epsilonclosure(state.out)
-        __epsilonclosure(state.out1)
+        results |= (__epsilonclosure(state.out))
+        results |= (__epsilonclosure(state.out1))
     else:
-        __eclosure_results.add(state)
-
-__next_states = set()
+        return {state}
+    return results
 
 def step(states, c):
     eclosure = epsilonclosure(states)
-    __next_states.clear()
+    next_states = set()
     for state in eclosure:
         if state.c == c or state.c == '.':
-            __next_states.add(state.out)
-    return __next_states
+            next_states.add(state.out)
+    return next_states
 
 def simulate(start, string):
     current_states = set([start])
