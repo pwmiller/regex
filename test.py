@@ -4,12 +4,13 @@ import regex
 SUCCEED, FAIL = True, False
 
 class RegexTestCase(unittest.TestCase):
-    def execute(self, testcases):
+    def execute(self, testcases, verbose=False):
         for testcase in testcases:
             pattern, string, expected = testcase
             actual = regex.match(pattern, string)
-            print "Testing match('%s', '%s').  Expected '%s', got '%s'." \
-                % (pattern, string, expected, actual)
+            if verbose:
+                print "Testing match('%s', '%s').  Expected '%s', got '%s'." \
+                  % (pattern, string, expected, actual)
             assert (actual == expected)
 
             
@@ -35,12 +36,14 @@ class SimpleTestCases(RegexTestCase):
             ]
 
     def testSimpleRegexes(self):
-        self.execute(self.testcases)
+        self.execute(self.testcases, verbose=True)
 
 class PathologicalTestCases(RegexTestCase):
     def setUp(self):
         self.testcases = [
             ('a?'*500+'a'*500, 'a'*500, 'a'*500),
+            ('(x+x+)+y', 'x'*20, None),
+            ('(ab?)*', 'a' * 100000, 'a' * 100000),
             ]
 
     def testPathologicalRegexes(self):
