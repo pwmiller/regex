@@ -36,6 +36,7 @@ class SimpleTestCases(RegexTestCase):
             (r'\t',         '\t',       '\t'),
             (r'\*',         '*',        '*'),
             (r'\**',        '*******',  '*******'),
+            ('[a-z]',       'abc',      'a'),
             ]
 
     def testSimpleRegexes(self):

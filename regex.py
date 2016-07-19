@@ -7,7 +7,7 @@ concat = Concat()
 
 infinity = float('inf')
 
-metachars = set('()|?+*\\')
+metachars = set('[]-()|?+*\\')
 
 class RegexError(Exception):
     pass
@@ -30,18 +30,47 @@ class Literal(object):
     def __repr__(self):
         return 'Literal: %s' % self.char
 
-def unescape(c):
+def unescape_char(c):
     if c in metachars:
         return Literal(c)
     else:
-        return ('\\'+c).decode('string_escape')
+        return ('\\'+c).decode('string_escape')[-1]
+
+def unescape_string(s):
+    result = []
+    chars = iter(s)
+    for c in chars:
+        if c == '\\':
+            result.append(unescape_char(chars.next()))
+        else:
+            result.append (c)
+    return result
 
 def is_atom(c):
-    return c not in metachars
+    return not (c in metachars or isinstance(c, frozenset)) # if c is a frozenset, it's a character class.
 
-def insert_explicit_concats(pattern):
+
+def expand_character_class(character_class):
+    result = []
+
+    character_class = iter(character_class)
+
+    previous = None
+
+    for char in character_class:
+        if char != '-':
+            result.append(char)
+        else:
+            next = character_class.next()
+            result.extend ([chr(c) for c in range(ord(previous), ord(next)+1)])
+
+        previous = char
+    return frozenset(result)
+
+def preprocess(pattern):
     '''
-    Takes a pattern and inserts explicit concatenation operators.
+    Converts character classes like [a-c] to CharacterClass('abc') and
+    inserts explicit concatenation operators.
     '''
     output = []
     previous = None
@@ -54,14 +83,14 @@ def insert_explicit_concats(pattern):
 
     for item in items:
         if item == '\\':
-            output.append(unescape(items.next()))
+            output.append(unescape_char(items.next()))
         elif not previous:
             output.append(item)
         elif item == '(' and (is_atom(previous) or previous in {'*', '?', '+'}):
             append_concat(item)
         elif is_atom(item) and is_atom(previous):
             append_concat(item)
-        elif is_atom(item) and not is_atom(previous) and previous not in {'(', '|'}:
+        elif is_atom(item) and not is_atom(previous) and previous not in {'(', '|', '[', '-'}:
             append_concat(item)
         else:
             output.append(item)
@@ -72,19 +101,25 @@ def insert_explicit_concats(pattern):
         previous = item
     return output
 
+
 def postfix(pattern):
 
     output = []
     stack = []
 
+    pattern = iter(pattern)
+
     for c in pattern:
-        if c == '(':               
+        if c == '(':
             stack.append(c)
-            
+
         elif c == ')':
             while stack[-1] != '(':
                 output.append(stack.pop())
             stack.pop() # pop the '(' but don't include it in the output
+        elif c == '[':
+            character_class =itertools.takewhile (lambda c: c!= ']', pattern)
+            stack.append(expand_character_class(character_class))
         else:
             while stack:
                 if precedence(stack[-1]) >= precedence(c):
@@ -92,7 +127,7 @@ def postfix(pattern):
                 else:
                     break
             stack.append(c)
-    
+
     while stack:
         output.append(stack.pop())
 
@@ -121,7 +156,7 @@ class Fragment(object):
 
 SPLIT = -1
 MATCH = -2
-    
+
 def nfa(postfix):
 
     def literal_char(c):
@@ -131,7 +166,7 @@ def nfa(postfix):
             return c
 
     stack = []
-    
+
     for c in postfix:
         if c == concat:
             second, first = stack.pop(), stack.pop()
@@ -192,7 +227,6 @@ def join (dangling_states, output):
         else:
             state.out = output
 
-
 def epsilonclosure(states):
     __visited_states = set()
     __eclosure_results = set()
@@ -217,7 +251,9 @@ def step(states, c):
     eclosure = epsilonclosure(states)
     next_states = set()
     for state in eclosure:
-        if state.c == c or state.c == '.':
+        if isinstance (state.c, frozenset) and c in state.c:
+            next_states.add(state.out)
+        elif state.c == c or state.c == '.':
             next_states.add(state.out)
     return next_states
 
@@ -234,6 +270,5 @@ def simulate(start, string):
         return string [:steps]
 
 def match(pattern, string):
-    automaton = nfa(postfix(insert_explicit_concats(pattern)))
+    automaton = nfa(postfix(preprocess(pattern)))
     return simulate(automaton, string)
-
