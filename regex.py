@@ -192,26 +192,26 @@ def join (dangling_states, output):
         else:
             state.out = output
 
-__visited_states = set()
 
 def epsilonclosure(states):
+    __visited_states = set()
     __eclosure_results = set()
-    __visited_states.clear()
+
+    def __epsilonclosure(state):
+        results = set()
+        if state.c == SPLIT and state not in __visited_states:
+            __visited_states.add(state)
+            results |= (__epsilonclosure(state.out))
+            results |= (__epsilonclosure(state.out1))
+        else:
+            return {state}
+        return results
+
     __eclosure_results = set(itertools.
                                  chain.
                                  from_iterable(
                                      [__epsilonclosure(state) for state in states]))
     return __eclosure_results
-
-def __epsilonclosure(state):
-    results = set()
-    if state.c == SPLIT and state not in __visited_states:
-        __visited_states.add(state)
-        results |= (__epsilonclosure(state.out))
-        results |= (__epsilonclosure(state.out1))
-    else:
-        return {state}
-    return results
 
 def step(states, c):
     eclosure = epsilonclosure(states)
