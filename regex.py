@@ -7,13 +7,14 @@ concat = Concat()
 
 infinity = float('inf')
 
-metachars = set('()|?+*')
+metachars = set('()|?+*\\')
 
 class RegexError(Exception):
     pass
 
 def precedence(c):
     return {
+        '\\':   0,
         '(':    1,
         '|':    2,
         concat: 3,
@@ -21,6 +22,19 @@ def precedence(c):
         '+':    4,
         '*':    4,
     }.get(c, infinity)
+
+class Literal(object):
+    def __init__(self, char):
+        self.char = char
+
+    def __repr__(self):
+        return 'Literal: %s' % self.char
+
+def unescape(c):
+    if c in metachars:
+        return Literal(c)
+    else:
+        return ('\\'+c).decode('string_escape')
 
 def is_atom(c):
     return c not in metachars
@@ -35,9 +49,13 @@ def insert_explicit_concats(pattern):
     def append_concat(item):
         output.append(concat)
         output.append (item)
-        
-    for item in pattern:
-        if not previous:
+
+    items = iter(pattern)
+
+    for item in items:
+        if item == '\\':
+            output.append(unescape(items.next()))
+        elif not previous:
             output.append(item)
         elif item == '(' and (is_atom(previous) or previous in {'*', '?', '+'}):
             append_concat(item)
@@ -55,6 +73,7 @@ def insert_explicit_concats(pattern):
     return output
 
 def postfix(pattern):
+
     output = []
     stack = []
 
@@ -104,7 +123,13 @@ SPLIT = -1
 MATCH = -2
     
 def nfa(postfix):
-    
+
+    def literal_char(c):
+        if isinstance(c, Literal):
+            return c.char
+        else:
+            return c
+
     stack = []
     
     for c in postfix:
@@ -149,7 +174,7 @@ def nfa(postfix):
             stack.append(first)
 
         else:
-            atom_state = State(c)
+            atom_state = State(literal_char(c))
             fragment = Fragment(atom_state, [atom_state])
             stack.append (fragment)
 

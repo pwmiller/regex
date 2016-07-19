@@ -33,6 +33,9 @@ class SimpleTestCases(RegexTestCase):
             ('.*Python.*',  'Python',   'Python'),
             ('.*(Python)',  'Python',   'Python'),
             ('Python|Perl', 'Python',   'Python'),
+            (r'\t',         '\t',       '\t'),
+            (r'\*',         '*',        '*'),
+            (r'\**',        '*******',  '*******'),
             ]
 
     def testSimpleRegexes(self):
