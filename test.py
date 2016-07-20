@@ -37,6 +37,10 @@ class SimpleTestCases(RegexTestCase):
             (r'\*',         '*',        '*'),
             (r'\**',        '*******',  '*******'),
             ('[a-z]',       'abc',      'a'),
+            ('a*',          'aaaaa',    'aaaaa'),
+            ('[A-Z][a-z]?', 'Yo, dawg', 'Yo'),
+            ('[A-Z][a-z], ','Yo, dawg', 'Yo, '),
+            ('[A-Z][a-z,]+','Yo, dawg', 'Yo,'),
             ]
 
     def testSimpleRegexes(self):

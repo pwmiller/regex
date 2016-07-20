@@ -47,7 +47,7 @@ def unescape_string(s):
     return result
 
 def is_atom(c):
-    return not (c in metachars or isinstance(c, frozenset)) # if c is a frozenset, it's a character class.
+    return not (c in metachars) or isinstance(c, frozenset) # if c is a frozenset, it's a character class.
 
 
 def expand_character_class(character_class):
@@ -82,6 +82,9 @@ def preprocess(pattern):
     items = iter(pattern)
 
     for item in items:
+        if item == '[':
+            item = expand_character_class(itertools.takewhile(lambda c: c != ']', items))
+
         if item == '\\':
             output.append(unescape_char(items.next()))
         elif not previous:
@@ -117,9 +120,6 @@ def postfix(pattern):
             while stack[-1] != '(':
                 output.append(stack.pop())
             stack.pop() # pop the '(' but don't include it in the output
-        elif c == '[':
-            character_class =itertools.takewhile (lambda c: c!= ']', pattern)
-            stack.append(expand_character_class(character_class))
         else:
             while stack:
                 if precedence(stack[-1]) >= precedence(c):
@@ -260,14 +260,14 @@ def step(states, c):
 def simulate(start, string):
     current_states = set([start])
     steps = 0
+    match_so_far = ''
     for c in string:
         current_states = step(current_states, c)
         steps += 1
+        current_states = epsilonclosure(current_states)
         if any(state.c == MATCH for state in current_states):
-            return string[:steps]
-    current_states = epsilonclosure(current_states)
-    if any(state.c == MATCH for state in current_states):
-        return string [:steps]
+            match_so_far = string[:steps]
+    return match_so_far or None
 
 def match(pattern, string):
     automaton = nfa(postfix(preprocess(pattern)))
